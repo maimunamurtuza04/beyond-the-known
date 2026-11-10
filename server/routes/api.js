@@ -22,6 +22,7 @@ const router = Router();
  *   GET /api/anomalies   → flagged days, timeline, summary
  *   GET /api/calibration → matched pairs, anchors, reliability
  *   GET /api/map         → sampled fire points for a month
+ *   GET /api/location    → local record around one coordinate
  *
  * Common query params: from=YYYY-MM-DD, to=YYYY-MM-DD,
  * region=<region id>, sensor=<sensor id>.
@@ -34,6 +35,7 @@ router.get('/trends', handle((query) => source.getTrends(query)));
 router.get('/anomalies', handle((query) => source.getAnomalies(query)));
 router.get('/calibration', handle((query) => source.getCalibration(query)));
 router.get('/map', handle((query) => source.getMap(query)));
+router.get('/location', handle((query) => source.getLocation(query)));
 
 router.get('/health', (req, res) => {
   res.json({

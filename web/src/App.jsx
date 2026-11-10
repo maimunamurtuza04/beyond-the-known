@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from './lib/api.js';
+import { api, API_BASE } from './lib/api.js';
 import { useRoute } from './lib/useRoute.js';
 import { NAV_BY_ID } from './lib/nav.js';
 import { FiltersProvider } from './state/Filters.jsx';
@@ -31,7 +31,6 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setError(null);
     api
       .meta(controller.signal)
       .then(setMeta)
@@ -40,6 +39,12 @@ export default function App() {
       });
     return () => controller.abort();
   }, [attempt]);
+
+  useEffect(() => {
+    if (meta || !error) return undefined;
+    const timer = setInterval(() => setAttempt((value) => value + 1), 5000);
+    return () => clearInterval(timer);
+  }, [error, meta]);
 
   useEffect(() => {
     const page = NAV_BY_ID[route];
@@ -51,15 +56,22 @@ export default function App() {
       <div className="boot-screen">
         <span className="boot-mark"><FlameMark size={54} /></span>
         <h1>Beyond the Known</h1>
-        <p className="boot-error-title">The API is not answering.</p>
+        <p className="boot-error-title">The local API is not answering.</p>
         <p className="boot-error-text">{error}</p>
         <div className="boot-hint">
-          Start both servers from the project root:
+          <span>
+            This app runs on generated mock data served by its own Express API. It does not need
+            Postgres or your cleaned dataset to start — this screen only means the browser could
+            not reach the API at <b>{API_BASE}</b>.
+          </span>
           <code>npm run dev</code>
-          <span>The UI is on <b>localhost:5180</b>, the API on <b>localhost:8787</b>.</span>
+          <span>
+            UI <b>localhost:5180</b> · API <b>localhost:8787</b>. Retrying automatically every
+            5 seconds.
+          </span>
         </div>
         <button type="button" className="btn" onClick={() => setAttempt((value) => value + 1)}>
-          <Icon name="refresh" size={14} /> Try again
+          <Icon name="refresh" size={14} /> Try again now
         </button>
       </div>
     );

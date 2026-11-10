@@ -2435,7 +2435,7 @@ select:focus-visible {
 .map-legend {
   position: absolute;
   left: 14px;
-  bottom: 14px;
+  bottom: 58px;
   width: 186px;
   padding: 10px 11px;
   border: 1px solid var(--line);
@@ -3693,6 +3693,464 @@ select:focus-visible {
 
   .year-summary > div:nth-child(5) {
     border-bottom: 0;
+  }
+}
+
+/* ── map legend · pinned coordinate ────────────────────────── */
+.map-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--text-2);
+}
+
+.map-legend-row + .map-legend-row {
+  margin-top: 7px;
+}
+
+.map-legend-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ff7a2f;
+  box-shadow: 0 0 0 3px rgba(255, 122, 47, 0.14);
+}
+
+.map-legend-cross {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 241, 234, 0.9);
+}
+
+.map-legend-cross::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: rgba(245, 241, 234, 0.9);
+}
+
+.map-coord-chip {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid rgba(249, 115, 22, 0.34);
+  border-radius: 9px;
+  background: rgba(10, 9, 8, 0.88);
+  backdrop-filter: blur(8px);
+  color: #fdba74;
+  z-index: 5;
+}
+
+.map-coord-chip svg {
+  flex-shrink: 0;
+}
+
+.map-coord-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.map-coord-text span {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.map-coord-text b {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.map-coord-chip .icon-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.map-pin {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.map-pin-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.92);
+  animation: pin-pulse 2.4s ease-out infinite;
+}
+
+.map-pin-dot {
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #ff7a2f;
+  border: 1.5px solid #0a0908;
+}
+
+@keyframes pin-pulse {
+  0% {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.22), 0 0 16px rgba(249, 115, 22, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 13px rgba(249, 115, 22, 0), 0 0 20px rgba(249, 115, 22, 0.18);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.22), 0 0 16px rgba(249, 115, 22, 0.4);
+  }
+}
+
+/* ── coordinate record skeleton ────────────────────────────── */
+.btn.small {
+  padding: 5px 9px;
+  gap: 4px;
+  font-size: 9px;
+}
+
+.point-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px 10px;
+  text-align: center;
+}
+
+.point-empty svg {
+  color: var(--sand-mid);
+}
+
+.point-empty p {
+  font-size: 9.5px;
+  color: var(--text-2);
+}
+
+.point-empty span {
+  font-size: 8.5px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.point-stats {
+  margin-top: 10px;
+}
+
+.point-error {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: #f0a58f;
+}
+
+.location-detail {
+  margin-top: 14px;
+}
+
+.location-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.location-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.location-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 17px;
+  border: 1px solid rgba(240, 165, 143, 0.24);
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #f0a58f;
+}
+
+.location-error p {
+  flex: 1;
+  min-width: 0;
+}
+
+.location-empty {
+  display: flex;
+  gap: 12px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--text-2);
+}
+
+.location-empty svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--sand-mid);
+}
+
+.location-empty strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.location-empty p {
+  margin-top: 4px;
+  font-size: 9.5px;
+  line-height: 1.55;
+  color: var(--dim);
+}
+
+.location-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.location-kpis > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 12px;
+  background: var(--surface);
+}
+
+.location-kpis span {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.location-kpis strong {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.location-kpis small {
+  font-size: 8px;
+  font-weight: 400;
+  color: var(--dim);
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.location-chart,
+.location-mixes,
+.location-nearby {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.location-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.location-block-head .mono {
+  font-size: 7.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sensor-head {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mix-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mix-row {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.mix-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mix-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.mix-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.mix-row .mono {
+  font-size: 8px;
+  text-align: right;
+  color: var(--dim);
+}
+
+.location-nearby {
+  margin-top: 14px;
+}
+
+.nearby-list {
+  display: grid;
+  gap: 8px;
+}
+
+.nearby-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 190px) 64px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+}
+
+.nearby-name {
+  font-size: 9.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nearby-row .mono {
+  font-size: 8px;
+  color: var(--dim);
+}
+
+.nearby-row .mono:last-child {
+  text-align: right;
+  color: var(--text-2);
+}
+
+.nearby-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.nearby-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8916a, #f97316);
+}
+
+.location-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.location-footnote svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.location-footnote code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(249, 115, 22, 0.08);
+  color: #fdba74;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+}
+
+@media (max-width: 1320px) {
+  .location-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .location-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .map-coord-chip {
+    left: 13px;
+    right: 13px;
+    top: auto;
+    bottom: 13px;
+  }
+
+  .map-legend {
+    bottom: 62px;
+  }
+
+  .location-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nearby-row {
+    grid-template-columns: minmax(90px, 1fr) 54px minmax(0, 1fr) 38px;
+    gap: 7px;
   }
 }
 

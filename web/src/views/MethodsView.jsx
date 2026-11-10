@@ -55,6 +55,7 @@ const ENDPOINTS = [
   { path: '/api/anomalies', params: 'from, to, region, sensor, severity', view: 'Anomalies', returns: 'Episodes, observed vs baseline series, severity mix' },
   { path: '/api/calibration', params: 'from, to, region, sensor', view: 'Calibration', returns: 'Matched pairs, anchors, reliability, histograms, region agreement' },
   { path: '/api/map', params: 'year, month, mode, region, sensor', view: 'Fire map', returns: 'Sampled points, bounds, monthly summary' },
+  { path: '/api/location', params: 'lat, lon, radiusKm, from, to, sensor', view: 'Fire map · clicked point', returns: 'Local summary, monthly trend, intensity/sensor mix, nearby regions' },
 ];
 
 const COPY_EXAMPLE =
@@ -195,7 +196,7 @@ export default function MethodsView({ meta }) {
       <Panel
         kicker="API CONTRACT"
         title="Every panel has one door"
-        subtitle="All eight endpoints share the same filters. Add a view without touching the database; add a data source without touching a chart."
+        subtitle="All nine endpoints share the same filters. Add a view without touching the database; add a data source without touching a chart."
         action={<span className="mono muted">JSON · no-store</span>}
       >
         <div className="table-wrap">
@@ -220,6 +221,11 @@ export default function MethodsView({ meta }) {
             </tbody>
           </table>
         </div>
+        <p className="panel-footnote">
+          <code>GET /api/location</code> is the skeleton behind map clicks: it returns the local
+          record within a radius of one coordinate. Implement the same response shape in your
+          adapter and the pinned-point panel keeps working.
+        </p>
       </Panel>
 
       <div className="grid methods-bottom">
@@ -249,7 +255,7 @@ export default function MethodsView({ meta }) {
             </div>
             <div>
               <strong>Basemap</strong>
-              <p>© OpenStreetMap contributors, tiles © CARTO. Attribution stays visible on the map.</p>
+              <p>© OpenStreetMap contributors, tiles © Esri, HERE, Garmin. Attribution stays visible on the map.</p>
             </div>
             <div>
               <strong>Built with</strong>

@@ -18,7 +18,7 @@ MODIS Terra/Aqua (1 km) and VIIRS Suomi NPP / NOAA-20 / NOAA-21 (375 m).
 | Screen | What it answers |
 | --- | --- |
 | **Overview** | How much fire, how strong, where, and how confidence is distributed |
-| **Fire map** | Where a chosen month burned, point by point, with a heat layer and playback |
+| **Fire map** | A chosen month's sampled detections on a plain basemap, plus a click-to-pin local record |
 | **Calendar** | Year strip, years × months, months × days, and seasonal cycles |
 | **Trends** | Long arcs, regional season heatmap, intensity mix, platform mix |
 | **Anomalies** | Days outside the 2018–2022 seasonal baseline, ranked by severity |
@@ -95,9 +95,25 @@ Use the **Data** page in the app, or read
 Keep each response shape identical to the mock function of the same name. The
 React app never changes.
 
-`postgres.example.js` contains a complete `getMeta()` and `getOverview()` plus a
-map query. The remaining functions follow the same pattern and carry TODO
-comments.
+`postgres.example.js` contains a complete `getMeta()` and `getOverview()` plus
+map and location queries. The remaining functions follow the same pattern and
+carry TODO comments.
+
+### Clicking the map
+
+The map is a plain, clearly defined basemap with every sampled detection in one
+orange. Clicking anywhere pins a latitude/longitude and asks the API for the
+record around it:
+
+```
+GET /api/location?lat=..&lon=..&radiusKm=600&from=..&to=..&sensor=..
+```
+
+The response contains a summary, a monthly trend, intensity and sensor mixes,
+and the nearby monitored regions. The mock implementation is `getLocation()` in
+`server/data/source.js` (distance-weighted regional model). The Postgres
+example shows a haversine radius query. This is a deliberate skeleton: replace
+the query, keep the shape, and the pinned-point panel keeps working.
 
 ---
 
@@ -133,6 +149,7 @@ Dates are `YYYY-MM-DD` (UTC). Region and sensor ids come from `/api/meta`.
 | `GET /api/anomalies` | `severity` | Episodes, observed vs baseline, severity mix |
 | `GET /api/calibration` | — | Matched pairs, anchors, reliability, histograms, region agreement |
 | `GET /api/map` | `year`, `month`, `mode=raw\|harmonized` | Sampled points, bounds, monthly summary |
+| `GET /api/location` | `lat`, `lon`, `radiusKm` (50–3000, default 600) | Local summary, monthly trend, intensity/sensor mix, nearby regions |
 | `GET /api/health` | — | Data mode and disclaimer |
 
 Responses are JSON and are never cached (`Cache-Control: no-store`).
@@ -164,7 +181,7 @@ illustrative until you connect `calibration_pairs` and `calibration_anchors`.
 server/
   index.js               Express app + static dist/
   config.js              PORT, DATABASE_URL, NODE_ENV
-  routes/api.js          Eight thin routes
+  routes/api.js          Nine thin routes
   data/source.js         THE SWITCH (mock ⇄ postgres)
   data/postgres.example.js  Worked adapter example (not imported)
   mock/                  Seeded synthetic record

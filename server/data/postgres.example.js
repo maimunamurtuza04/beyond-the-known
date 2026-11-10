@@ -204,6 +204,81 @@ export async function getMap(query) {
   };
 }
 
+/**
+ * LOCATION — the real radius query behind the map click.
+ * Mirrors getLocation() in source.js. The CTE computes great-circle
+ * distance in SQL, so no PostGIS extension is required.
+ *
+ * Fill in intensityMix / sensorMix / nearbyRegions with further
+ * aggregates over the same `local` CTE. The UI only needs the keys
+ * shown here; missing ones render as empty panels.
+ */
+export async function getLocation(query) {
+  const lat = Number(query.lat);
+  const lon = Number(query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    const error = new Error('lat and lon are required decimal degrees.');
+    error.status = 400;
+    throw error;
+  }
+  const radiusKm = Math.min(3000, Math.max(50, Number(query.radiusKm) || 600));
+  const { from, to, sensor } = scope(query);
+  const params = [lat, lon, radiusKm, from, to];
+  const sensorClause = sensor ? 'AND sensor = $6' : '';
+  if (sensor) params.push(sensor);
+
+  const distance = `
+    6371 * 2 * asin(least(1, sqrt(
+      power(sin(radians(latitude - $1) / 2), 2) +
+      cos(radians($1)) * cos(radians(latitude)) *
+      power(sin(radians(longitude - $2) / 2), 2)
+    )))
+  `;
+
+  const { rows } = await pool.query(
+    `WITH local AS (
+       SELECT *, ${distance} AS distance_km
+         FROM fire_detections
+        WHERE acquired_date BETWEEN $4 AND $5 ${sensorClause}
+     )
+     SELECT
+       count(*)::int                                 AS detections,
+       count(DISTINCT coalesce(match_group_id, id))::int AS fires,
+       round(avg(frp_mw)::numeric, 1)                AS mean_frp,
+       round(avg(confidence_pct)::numeric, 1)        AS mean_confidence,
+       count(DISTINCT acquired_date)::int            AS active_days,
+       min(distance_km)                              AS nearest_km
+     FROM local
+     WHERE distance_km <= $3`,
+    params,
+  );
+
+  const total = rows[0] || {};
+  return {
+    lat,
+    lon,
+    radiusKm,
+    window: { from, to },
+    sensor: sensor ?? 'all',
+    hasData: Number(total.detections || 0) > 0,
+    summary: {
+      detections: Number(total.detections || 0),
+      fires: Number(total.fires || 0),
+      meanFrp: Number(total.mean_frp || 0),
+      meanConfidence: Number(total.mean_confidence || 0),
+      highConfidenceShare: 0, // add: avg(confidence_pct >= 75)
+      activeDays: Number(total.active_days || 0),
+      peakMonth: null, // add a second GROUP BY month query
+    },
+    monthly: [], // GROUP BY date_trunc('month', acquired_date)
+    intensityMix: [], // GROUP BY the FRP bands from INTENSITY_CLASSES
+    sensorMix: [], // GROUP BY sensor
+    nearbyRegions: [], // GROUP BY region_id + min(distance_km)
+    nearest: null,
+    method: 'Postgres radius query over fire_detections.',
+  };
+}
+
 // TODO: getTimeseries, getCalendar, getTrends, getAnomalies, getCalibration.
 // Each one is a SELECT ... GROUP BY against daily_region (or anomalies /
 // calibration_pairs) returning the shape documented in source.js.

@@ -33,10 +33,11 @@ export function ErrorState({ error, onRetry, compact = false }) {
     <div className={`state-box error ${compact ? 'compact' : ''}`}>
       <span className="state-icon"><Icon name="alert" size={20} /></span>
       <div>
-        <h3>Could not load this record</h3>
+        <h3>Could not reach the local API</h3>
         <p>{error}</p>
         <p className="state-hint">
-          Is the API running? In development use <code>npm run dev</code> from the project root.
+          The demo runs on generated mock data served by its own Express API — no database is
+          required. In development, start both servers with <code>npm run dev</code>, then retry.
         </p>
       </div>
       {onRetry && (

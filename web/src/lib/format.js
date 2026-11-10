@@ -28,6 +28,13 @@ export function fmtNumber(value, digits = 1) {
   return Number(value).toFixed(digits);
 }
 
+export function fmtCoords(lat, lon, digits = 4) {
+  if (lat == null || lon == null || Number.isNaN(lat) || Number.isNaN(lon)) return '—';
+  const ns = lat >= 0 ? 'N' : 'S';
+  const ew = lon >= 0 ? 'E' : 'W';
+  return `${Math.abs(lat).toFixed(digits)}° ${ns} · ${Math.abs(lon).toFixed(digits)}° ${ew}`;
+}
+
 export function fmtDate(value, options = {}) {
   if (!value) return '—';
   const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);

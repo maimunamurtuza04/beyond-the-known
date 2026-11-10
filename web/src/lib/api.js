@@ -51,6 +51,9 @@ export const api = {
   anomalies: (params, signal) => get('/anomalies', params, signal),
   calibration: (params, signal) => get('/calibration', params, signal),
   map: (params, signal) => get('/map', params, signal),
+  // Local record around a clicked coordinate. Skeleton endpoint:
+  // implement the same response shape in your Postgres adapter.
+  location: (params, signal) => get('/location', params, signal),
 };
 
 export { BASE as API_BASE };

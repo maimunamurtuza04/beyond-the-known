@@ -155,7 +155,25 @@ then implement `getCalibration()` in
 
 ---
 
-## 7. Connect the app
+## 7. Coordinate record (`/api/location`)
+
+The map's click-to-pin panel needs no extra table: it is a radius query over
+`fire_detections`. The mock implementation is `getLocation()` in
+[`server/data/source.js`](../server/data/source.js); a worked haversine query is
+in [`server/data/postgres.example.js`](../server/data/postgres.example.js).
+
+```
+GET /api/location?lat=..&lon=..&radiusKm=600&from=..&to=..&sensor=..
+```
+
+Keep the response shape (`summary`, `monthly`, `intensityMix`, `sensorMix`,
+`nearbyRegions`, `nearest`) and the pinned-point panel in the browser keeps
+working. If your coordinates are indexed, add a GiST index on a `geography`
+column or a bounding-box prefilter; the example shows the portable version.
+
+---
+
+## 8. Connect the app
 
 1. Copy `.env.example` to `.env` and set `DATABASE_URL`.
 2. Copy `server/data/postgres.example.js` to `server/data/postgres.js`.

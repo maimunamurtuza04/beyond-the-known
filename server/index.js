@@ -40,8 +40,9 @@ app.use((req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
   console.error('[api]', error);
-  res.status(500).json({
-    error: 'Request failed',
+  const status = Number(error.status) || 500;
+  res.status(status).json({
+    error: status === 400 ? 'Invalid request' : 'Request failed',
     message: config.nodeEnv === 'development' ? error.message : 'See server logs.',
   });
 });

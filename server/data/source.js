@@ -1030,6 +1030,218 @@ export function getMap(query) {
   };
 }
 
+/** ── LOCATION RECORD ─────────────────────────────────────── */
+const EARTH_RADIUS_KM = 6371;
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function monthsBetween(from, to) {
+  const months = [];
+  const cursor = new Date(`${from.slice(0, 7)}-01T00:00:00Z`);
+  const end = new Date(`${to.slice(0, 7)}-01T00:00:00Z`);
+  while (cursor <= end) {
+    months.push(cursor.toISOString().slice(0, 7));
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return months;
+}
+
+/**
+ * Everything the map asks for after a click.
+ *
+ * MOCK: each monitored region contributes its daily record to the
+ * clicked point, weighted by distance inside `radiusKm`. That keeps
+ * the demo honest about being a regional model rather than pixel
+ * data.
+ *
+ * REAL DATA: implement this in server/data/postgres.js with a
+ * radius query over fire_detections (see postgres.example.js),
+ * then return the same keys. The map panel needs no changes.
+ */
+export function getLocation(query) {
+  const lat = Number(query.lat);
+  const lon = Number(query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    const error = new Error('lat and lon are required decimal degrees.');
+    error.status = 400;
+    throw error;
+  }
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    const error = new Error('lat must be -90..90 and lon must be -180..180.');
+    error.status = 400;
+    throw error;
+  }
+
+  const radiusKm = Math.min(3000, Math.max(50, Number(query.radiusKm) || 600));
+  const scope = normalizeScope({
+    from: query.from,
+    to: query.to,
+    region: 'all',
+    sensor: query.sensor,
+  });
+
+  const influences = REGIONS.map((region) => {
+    const distanceKm = haversineKm(lat, lon, region.lat, region.lon);
+    const inside = distanceKm <= radiusKm;
+    return {
+      region,
+      distanceKm: round(distanceKm, 0),
+      weight: inside ? (1 - distanceKm / radiusKm) ** 1.6 : 0,
+    };
+  }).sort((a, b) => a.distanceKm - b.distanceKm);
+
+  const nearest = influences[0] || null;
+  const active = influences.filter((entry) => entry.weight > 0);
+  const weightByRegion = new Map(active.map((entry) => [entry.region.id, entry.weight]));
+
+  const sensorList = scope.sensor === 'all' ? SENSORS : [SENSOR_BY_ID[scope.sensor]];
+  const records = scopeDays(scope);
+
+  const monthlyMap = new Map();
+  const classTotals = emptyClasses();
+  const sensorTotals = new Map();
+  const regionDetections = new Map();
+  let detections = 0;
+  let fires = 0;
+  let frpWeighted = 0;
+  let confidenceWeighted = 0;
+  let highConfidence = 0;
+  let activeDays = 0;
+
+  for (const record of records) {
+    const weight = weightByRegion.get(record.regionId) || 0;
+    if (!weight) continue;
+
+    const count = countOf(record, scope.sensor);
+    if (!count) continue;
+
+    const local = count * weight;
+    detections += local;
+    fires += firesOf(record, scope.sensor) * weight;
+    frpWeighted += frpOf(record, scope.sensor) * local;
+    confidenceWeighted += confidenceOf(record, scope.sensor) * local;
+    if (confidenceOf(record, scope.sensor) >= 75) highConfidence += local;
+    if (local >= 0.5) activeDays += 1;
+
+    regionDetections.set(
+      record.regionId,
+      (regionDetections.get(record.regionId) || 0) + local,
+    );
+
+    const classes = classesOf(record, scope.sensor);
+    for (const c of INTENSITY_CLASSES) classTotals[c.id] += (classes[c.id] || 0) * weight;
+
+    for (const sensor of sensorList) {
+      const n = record.sensor[sensor.id]?.n ?? 0;
+      if (n) sensorTotals.set(sensor.id, (sensorTotals.get(sensor.id) || 0) + n * weight);
+    }
+
+    const bucket = monthlyMap.get(record.monthKey) || {
+      detections: 0,
+      fires: 0,
+      frpWeighted: 0,
+    };
+    bucket.detections += local;
+    bucket.fires += firesOf(record, scope.sensor) * weight;
+    bucket.frpWeighted += frpOf(record, scope.sensor) * local;
+    monthlyMap.set(record.monthKey, bucket);
+  }
+
+  const monthly = monthsBetween(scope.from, scope.to).map((period) => {
+    const bucket = monthlyMap.get(period) || { detections: 0, fires: 0, frpWeighted: 0 };
+    return {
+      period,
+      label: monthLabel(period),
+      detections: Math.round(bucket.detections),
+      fires: Math.round(bucket.fires),
+      frp: bucket.detections ? round(bucket.frpWeighted / bucket.detections, 1) : 0,
+    };
+  });
+
+  const totalDetections = Math.round(detections);
+  const classTotal = INTENSITY_CLASSES.reduce((sum, c) => sum + classTotals[c.id], 0);
+  const classCounts = classTotal
+    ? distribute(
+        totalDetections,
+        INTENSITY_CLASSES.map((c) => classTotals[c.id] / classTotal),
+      )
+    : INTENSITY_CLASSES.map(() => 0);
+  const intensityMix = INTENSITY_CLASSES.map((c, index) => ({
+    id: c.id,
+    label: c.label,
+    color: c.color,
+    count: classCounts[index],
+  }));
+
+  const sensorTotal = [...sensorTotals.values()].reduce((sum, n) => sum + n, 0);
+  const sensorMix = [...sensorTotals.entries()]
+    .map(([id, count]) => ({
+      id,
+      name: SENSOR_BY_ID[id]?.short || id,
+      count: Math.round(count),
+      share: sensorTotal ? round(count / sensorTotal, 4) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const nearbyRegions = active.map((entry) => {
+    const local = regionDetections.get(entry.region.id) || 0;
+    return {
+      id: entry.region.id,
+      name: entry.region.name,
+      country: entry.region.country,
+      distanceKm: entry.distanceKm,
+      weight: round(entry.weight, 3),
+      detections: Math.round(local),
+      share: detections ? round(local / detections, 4) : 0,
+    };
+  });
+
+  const peak = monthly.reduce(
+    (best, row) => (!best || row.detections > best.detections ? row : best),
+    null,
+  );
+
+  return {
+    lat: round(lat, 5),
+    lon: round(lon, 5),
+    radiusKm,
+    window: { from: scope.from, to: scope.to },
+    sensor: scope.sensor,
+    hasData: totalDetections > 0,
+    summary: {
+      detections: totalDetections,
+      fires: Math.round(fires),
+      meanFrp: detections ? round(frpWeighted / detections, 1) : 0,
+      meanConfidence: detections ? round(confidenceWeighted / detections, 1) : 0,
+      highConfidenceShare: detections ? round(highConfidence / detections, 4) : 0,
+      activeDays,
+      peakMonth: peak && peak.detections ? { period: peak.period, label: peak.label } : null,
+    },
+    monthly,
+    intensityMix,
+    sensorMix,
+    nearbyRegions,
+    nearest: nearest
+      ? {
+          id: nearest.region.id,
+          name: nearest.region.name,
+          distanceKm: nearest.distanceKm,
+          inside: nearest.weight > 0,
+        }
+      : null,
+    method:
+      'Illustrative local model: each monitored region contributes its daily record weighted by distance inside the chosen radius. Replace getLocation() with a radius query over your cleaned detections.',
+  };
+}
+
 /** ── THE SWITCH ──────────────────────────────────────────── */
 // When your Postgres queries are ready:
 //
@@ -1048,6 +1260,7 @@ const mockSource = {
   getAnomalies,
   getCalibration,
   getMap,
+  getLocation,
   mode: 'mock',
   disclaimer: config.databaseUrl
     ? 'DATABASE_URL is set, but the Postgres adapter has not been wired yet. Showing the illustrative mock record.'
