@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+
+# Keep sample data out of git if it gets large
+data/*
+!data/README.md
+!data/.gitkeep
